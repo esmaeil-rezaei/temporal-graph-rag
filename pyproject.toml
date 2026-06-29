@@ -1,0 +1,76 @@
+[project]
+name = "multimodal-rag-system"
+version = "1.0.0"
+description = "Multimodal retrieval-augmented generation system with namespace federation, GraphRAG, and a 7-layer offline evaluation suite."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Ishmael Rezaei" },
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".venv",
+    "venv",
+    "knowledge_base",
+    "eval_results",
+    "artifacts",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+ignore = [
+    "E501",  # line length is enforced by black/ruff-format instead
+    "B008",  # function calls in argument defaults (common with FastAPI Depends)
+    "UP017", # datetime.UTC requires Python 3.11+; project supports >=3.10
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402"]  # late imports after pytest.importorskip()
+"scripts/**" = ["E402"]
+"tools/**" = ["E402"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+extend-exclude = '''
+(
+  /(\.venv|venv|knowledge_base|eval_results|artifacts)/
+)
+'''
+
+[tool.mypy]
+python_version = "3.11"
+explicit_package_bases = true
+ignore_missing_imports = true
+warn_unused_ignores = false
+warn_redundant_casts = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+exclude = [
+    "^\\.venv/",
+    "^venv/",
+    "^knowledge_base/",
+    "^eval_results/",
+    "^tools/",
+    "^scripts/",
+]
+
+# Pytest configuration lives in pytest.ini (kept separate since pytest.ini
+# takes priority over [tool.pytest.ini_options] when both are present).

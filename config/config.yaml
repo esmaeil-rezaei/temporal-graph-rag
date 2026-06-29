@@ -1,0 +1,350 @@
+# Application Metadata
+app:
+  name: "Temporal Graph RAG"
+  version: "0.1.0"
+  description: >
+    "Temporal Graph RAG is a knowledge-graph-backed RAG system for tracking entities
+    (patients, diseases, medications, story characters) over time. It combines dense
+    vector search, BM25 sparse retrieval, a Neo4j knowledge graph, and a multi-agent
+    orchestration layer to answer time-aware questions grounded in source documents."
+
+# Knowledge Base — Source Document Settings
+knowledge_base:
+  root_dir: "knowledge_base"                    # source root directory
+  supported_extensions:                         # supported ingestion formats
+    - ".pdf"
+    - ".md"
+    - ".txt"
+    - ".docx"
+    - ".html"
+  scan_recursively: true                        # include subdirectories
+  source_metadata_field: "source_name"          # stores folder name as source
+  encoding: "utf-8"                             # default encoding
+
+# Data Ingestion & Preprocessing
+ingestion:
+  parsing:
+    pdf_strategy: "hi_res"                      # parsing mode: fast | hi_res | ocr_only
+    ocr_languages: ["eng"]                      # OCR languages
+    extract_images: false                       # image extraction disabled (text-only for now)
+
+  tables:
+    extract_tables: true                        # table extraction toggle
+    backend: "camelot"                          # table parser backend
+    output_format: "markdown"                   # table output format: json | markdown
+    handle_merged_cells: true
+    multi_page_tables: true
+    store_column_metadata: true
+
+  deduplication:
+    enabled: true                               # dedup toggle
+    exact_hash_algorithm: "sha256"
+    fuzzy_method: "minhash"
+    minhash_num_perm: 128
+    jaccard_threshold: 0.85                     # similarity threshold
+    keep_strategy: "newest"                     # which duplicate to keep: newest | oldest
+
+  versioning:
+    add_timestamp: true                         # add ingestion timestamp
+    delta_ingestion: true                       # skip unchanged files
+    ttl_days: 365
+    version_field: "doc_version"
+
+# Chunking Strategy
+chunking:
+  strategy: "hierarchical"                     # fixed | semantic | hierarchical
+  chunk_size: 512
+  min_chunk_size: 50
+  chunk_overlap: 64
+  sliding_window: false
+
+  breakpoint_percentile: 0.25
+  window_size: 3
+  override_chunk_size: 400
+
+# Embedding Models
+embeddings:
+  backend: "sentence_transformers"
+  default_model: "BAAI/bge-large-en-v1.5"
+  domain_models:
+    medical: "pritamdeka/S-PubMedBert-MS-MARCO"
+
+  multilingual_model: "intfloat/multilingual-e5-large"
+  language_detection: true
+  embedding_dimensions: 1024
+  batch_size: 64
+
+# Vector Index
+vector_store:
+  backend: "qdrant"
+  collection_name: "temporal_graph_rag"
+  distance_metric: "cosine"
+
+  hnsw:
+    m: 16
+    ef_construct: 200
+    ef_search: 100
+
+  hybrid_search:
+    enabled: true
+    sparse_backend: "elasticsearch"
+    sparse_index_name: "rag_sparse"
+    fusion_method: "rrf"
+    rrf_k: 60
+
+# Query Understanding
+query:
+  expansion:
+    enabled: true
+    method: "hyde"
+    hyde_model: "gpt-4-turbo"
+    hyde_max_tokens: 256
+
+  decomposition:
+    enabled: true
+    max_sub_questions: 4
+    intent_classification: true
+    multi_query_k: 3
+
+  conversation:
+    enabled: true
+    history_window: 6
+    condense_model: "gpt-4-turbo"
+    compress_history: true
+    compress_threshold: 14
+    compress_model: "gpt-4o-mini"
+    compress_max_tokens: 400
+
+  entity_recognition:
+    enabled: true
+    model: "en_core_web_trf"
+    temporal_grounding: true                    # time-aware query parsing
+
+  intent_routing:
+    enabled: true
+    model: "gpt-4o"
+    min_confidence_to_skip: 0.80
+
+  agents:
+    orchestrator_model: "gpt-4o"
+    worker_model: "gpt-4o"
+    max_turns: 15
+
+  guardrails:
+    max_input_tokens: 1000
+    min_faithfulness_score: 0.40
+    min_answer_tokens: 20
+    max_answer_tokens: 8000
+
+# Retrieval & Re-ranking
+retrieval:
+  top_k_initial: 20
+  top_k_final: 5
+
+  parent_child:
+    enabled: true
+
+  sentence_window:
+    enabled: true
+    window_size: 3
+
+  recursive_retrieval: false
+
+  reranking:
+    enabled: true
+    model: "cohere"
+    cohere_model: "rerank-english-v3.0"
+    bge_model: "BAAI/bge-reranker-large"
+
+  context_ordering:
+    strategy: "position_aware"
+    compress_before_llm: true
+
+  context_management:
+    max_context_tokens: 8192
+    compression_model: "llm_lingua"
+    llm_lingua_ratio: 0.5
+    overflow_strategy: "map_reduce"
+
+# Generation & Faithfulness
+generation:
+  model: "gpt-4-turbo"
+  temperature: 0.0
+  max_tokens: 1024
+  grounded_prompting: true
+
+  faithfulness_check:
+    enabled: false
+    method: "ragas"
+
+  citations:
+    enabled: true
+    format: "inline"
+    map_span_to_chunk: true
+
+  conflict_handling:
+    detect_conflicts: true
+    freshness_weight: 0.3
+    present_both_on_conflict: true
+
+# Evaluation
+evaluation:
+  llm_judge:
+    enabled: false
+    method: "ragas"
+    model: "gpt-4-turbo"
+    criteria: ["faithfulness", "relevance", "coherence", "completeness"]
+
+  pipeline_eval:
+    retrieval_metrics: ["recall@k", "ndcg", "mrr"]
+    generation_metrics: ["faithfulness", "answer_relevancy", "context_precision"]
+
+  drift_detection:
+    enabled: true
+    reference_window: 1000
+    drift_threshold: 0.15
+
+  cost_latency_slo:
+    enabled: true
+    p50_latency_ms: 2000.0
+    p95_latency_ms: 6000.0
+    p99_latency_ms: 10000.0
+    max_cost_per_query_usd: 0.05
+    max_tokens_per_query: 6000
+
+# Production & Operations
+operations:
+  performance:
+    async_retrieval: true
+
+    semantic_cache:
+      enabled: true
+      backend: "redis"
+      similarity_threshold: 0.95
+      ttl_seconds: 3600
+
+  access_control:
+    enabled: true
+    backend: "qdrant_namespaces"
+    metadata_acl_field: "allowed_roles"
+    jwt_auth: true
+
+  pii:
+    detect_at_ingestion: false
+    pii_block_on_input: false
+    detection_engine: "presidio"
+    entities_to_redact:
+      - "PERSON"
+      - "EMAIL_ADDRESS"
+      - "PHONE_NUMBER"
+      - "CREDIT_CARD"
+      - "US_SSN"
+      - "IP_ADDRESS"
+    sensitivity_tagging: true
+    output_scanning: true
+
+  observability:
+    tracing_enabled: true
+    log_token_usage: true
+    structured_logging: true
+    log_chunk_ids: true
+
+# Logging
+log:
+  format: "json"
+  rotation: "daily"
+  retention_days: 30
+  log_dir: "logs"
+  cost_latency_ledger: "logs/cost_latency.jsonl"
+
+# GraphRAG — Knowledge Graph Extraction & Retrieval
+graphrag:
+  enabled: true
+  run_community_detection: true
+
+  extraction_model: "gpt-4o"
+  extraction_temperature: 0.0
+  extraction_max_tokens: 2048
+  extraction_concurrency: 8
+  max_chunk_chars: 4000
+
+  community:
+    min_community_size: 1
+    resolution_levels: [1.0, 0.5]
+    summary_model: "gpt-4o"
+    max_entities_per_summary: 30
+
+  retrieval:
+    mode: "hybrid"                             # local | global | hybrid
+    local_hop_depth: 2
+    community_top_k: 5
+    max_entity_source_chunks: 10
+    rrf_k: 60
+
+  entity_types:
+    # Disease & Clinical Presentation
+    - DISEASE
+    - DISEASE_STAGE
+    - SYMPTOM
+    - COMORBIDITY
+    # Biomarkers
+    - BIOMARKER
+    - IMAGING_MODALITY
+    - ANATOMICAL_REGION
+    # Genetics & Risk
+    - GENETIC_FACTOR
+    - RISK_FACTOR
+    # Clinical Assessment
+    - CLINICAL_ASSESSMENT
+    # Treatment
+    - DRUG
+    - INTERVENTION
+    - TREATMENT_OUTCOME
+    # Mechanisms
+    - MECHANISM
+    - PATHWAY
+    # Study & Evidence
+    - COHORT
+    - STUDY_DESIGN
+    - POPULATION
+    - DEMOGRAPHIC_VARIABLE
+    - OUTCOME_VARIABLE
+    - STUDY_FINDING
+    - LIMITATION
+    # Statistical & ML
+    - STATISTICAL_METHOD
+    - PERFORMANCE_METRIC
+
+  relationship_types:
+    # Association & Causation
+    - ASSOCIATED_WITH
+    - PREDICTS
+    - CORRELATES_WITH
+    - CAUSES
+    - MEDIATES
+    - MODERATES
+    - INTERACTS_WITH
+    # Risk & Progression
+    - INCREASES_RISK_OF
+    - REDUCES_RISK_OF
+    - ACCELERATES
+    - STABILIZES
+    - PRECEDES
+    # Treatment
+    - TREATS
+    - INHIBITS
+    - RESPONDS_TO
+    # Biomarker
+    - DIFFERENTIATES
+    - REFLECTS
+    - TRACKS
+    # Evidence & Validity
+    - VALIDATED_IN
+    - OUTPERFORMS
+    - CONTRADICTS
+    - REPLICATES
+    - HIGHLIGHTS_LIMITATION
+    # Study Design
+    - CONDUCTED_IN
+    - CONTROLS_FOR
+    - STRATIFIED_BY

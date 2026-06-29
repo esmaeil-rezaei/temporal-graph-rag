@@ -1,0 +1,63 @@
+# pip-compile requirements.in -o requirements.txt
+# Dev/test/lint tooling: requirements-dev.txt
+
+# Web framework / API server
+fastapi==0.115.12
+uvicorn==0.34.3
+pydantic==2.13.2
+pydantic-settings==2.13.1
+PyJWT==2.12.1
+PyYAML==6.0.3
+python-multipart==0.0.26
+Jinja2==3.1.6
+aiofiles==25.1.0
+
+# Vector store / search / cache / graph DB
+qdrant-client==1.17.1
+elasticsearch==9.3.0
+redis==7.4.0
+neo4j==5.24.0
+
+# LLM / embeddings / reranking
+openai==2.32.0
+openai-agents==0.0.17
+cohere==5.21.1
+langchain-openai==1.1.14
+sentence-transformers==3.0.0
+torch==2.2.2
+torchvision==0.17.2
+tiktoken==0.12.0
+
+# Evaluation
+ragas==0.4.3
+
+# Ingestion / parsing / NLP
+spacy==3.7.5
+en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.1/en_core_web_lg-3.7.1-py3-none-any.whl#sha256=ab70aeb6172cde82508f7739f35ebc9918a3d07debeed637403c8f794ba3d3dc
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl#sha256=86cc141f63942d4b2c5fcee06630fd6f904788d2f0ab005cce45aadb8fb73889
+en-core-web-trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.3/en_core_web_trf-3.7.3-py3-none-any.whl#sha256=f72abb34bdf174876bd4267b29b2501677e605e0a251fdc56c163003182ed68b
+langdetect==1.0.9
+presidio_analyzer==2.2.362
+presidio_anonymizer==2.2.362
+unstructured==0.18.32
+camelot-py==0.11.0
+ghostscript
+
+# GraphRAG / community detection
+networkx==3.6.1
+python-louvain
+cdlib
+datasketch==1.10.0
+
+# Numerical / ML
+numpy==1.26.4
+scikit-learn==1.8.0
+
+# RLHF / fine-tuning
+transformers==4.46.3
+trl==0.12.2
+peft==0.14.0
+accelerate==1.2.1
+datasets==3.2.0
+# 8-bit optimizers for low-memory fine-tuning; Linux-only wheels.
+bitsandbytes==0.45.0; platform_system == "Linux"
